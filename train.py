@@ -15,6 +15,8 @@ print(f"Using device: {DEVICE}")
 # Load Data
 dataset = SAROpticalDataset('images/sar_train/', 'images/oi_train/')
 dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+print(f"Number of training samples: {len(dataset)}")
+print(f"Number of batches: {len(dataloader)}")
 
 # Initialize Model, Loss, Optimizer
 model = SPADEGenerator().to(DEVICE)
