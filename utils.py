@@ -19,10 +19,13 @@ class SAROpticalDataset(Dataset):
         sar_img = cv2.imread(os.path.join(self.sar_dir, self.sar_images[idx]), cv2.IMREAD_GRAYSCALE)
         optical_img = cv2.imread(os.path.join(self.optical_dir, self.optical_images[idx]))
 
+        # Normalize SAR image to [0, 1]
         sar_img = cv2.resize(sar_img, self.img_size) / 255.0
-        optical_img = cv2.resize(optical_img, self.img_size)
-
         sar_img = np.expand_dims(sar_img, axis=0)
+
+        # Normalize optical image to [-1, 1]
+        optical_img = cv2.resize(optical_img, self.img_size)
+        optical_img = (optical_img / 127.5) - 1
         optical_img = np.transpose(optical_img, (2, 0, 1))
 
         return torch.from_numpy(sar_img).float(), torch.from_numpy(optical_img).float()

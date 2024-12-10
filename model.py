@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 # Define SPADE Block
@@ -17,7 +16,6 @@ class SPADE(nn.Module):
         gamma = self.mlp_gamma(actv)
         beta = self.mlp_beta(actv)
         return normalized * (1 + gamma) + beta
-
 
 # Define SPADE Generator
 class SPADEGenerator(nn.Module):

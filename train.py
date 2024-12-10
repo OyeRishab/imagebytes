@@ -28,19 +28,16 @@ for epoch in range(EPOCHS):
     model.train()
     total_loss = 0
 
-    for idx, (sar, optical) in enumerate(dataloader):
-        sar, optical = sar.float().to(DEVICE), optical.float().to(DEVICE)
-
-        # Print filenames
-        sar_filename = dataset.sar_images[idx]
-        optical_filename = dataset.optical_images[idx]
+    for sar, optical in dataloader:
+        sar = sar.float().to(DEVICE)
+        optical = optical.float().to(DEVICE)
 
         # Forward pass
-        output = model(sar, sar)  # SAR image used as segmentation map
+        optimizer.zero_grad()
+        output = model(sar, sar)
         loss = criterion(output, optical)
 
         # Backward pass
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
