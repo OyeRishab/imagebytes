@@ -1,51 +1,47 @@
 import torch
 import torch.nn as nn
 
-# Generator using DCGAN-like architecture
-class Generator(nn.Module):
-    def __init__(self):
-        super(Generator, self).__init__()
+# Define SPADE Block
+class SPADE(nn.Module):
+    def __init__(self, norm_nc, label_nc):
+        super(SPADE, self).__init__()
+        self.param_free_norm = nn.BatchNorm2d(norm_nc, affine=False)
+        
+        self.mlp_shared = nn.Conv2d(label_nc, 128, kernel_size=3, padding=1)
+        self.mlp_gamma = nn.Conv2d(128, norm_nc, kernel_size=3, padding=1)
+        self.mlp_beta = nn.Conv2d(128, norm_nc, kernel_size=3, padding=1)
 
-        def block(in_channels, out_channels, kernel_size=4, stride=2, padding=1, bn=True):
-            layers = [nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, bias=False)]
-            if bn:
-                layers.append(nn.BatchNorm2d(out_channels))
-            layers.append(nn.ReLU(inplace=True))
-            return nn.Sequential(*layers)
+    def forward(self, x, segmap):
+        normalized = self.param_free_norm(x)
+        actv = nn.ReLU()(self.mlp_shared(segmap))
+        gamma = self.mlp_gamma(actv)
+        beta = self.mlp_beta(actv)
+        return normalized * (1 + gamma) + beta
 
-        self.model = nn.Sequential(
-            block(1, 64, bn=False),
-            block(64, 128),
-            block(128, 256),
-            block(256, 512),
-            nn.ConvTranspose2d(512, 3, kernel_size=4, stride=2, padding=1),
-            nn.Tanh()
+
+# Define SPADE Generator
+class SPADEGenerator(nn.Module):
+    def __init__(self, input_nc=1, output_nc=3, segmap_nc=1):
+        super(SPADEGenerator, self).__init__()
+
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_nc, 64, kernel_size=3, padding=1),
+            nn.ReLU()
         )
 
-    def forward(self, x):
-        return self.model(x)
+        self.spade1 = SPADE(64, segmap_nc)
+        self.spade2 = SPADE(64, segmap_nc)
 
-
-# Discriminator using PatchGAN
-class Discriminator(nn.Module):
-    def __init__(self):
-        super(Discriminator, self).__init__()
-
-        def block(in_channels, out_channels, kernel_size=4, stride=2, padding=1, bn=True):
-            layers = [nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False)]
-            if bn:
-                layers.append(nn.BatchNorm2d(out_channels))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            return nn.Sequential(*layers)
-
-        self.model = nn.Sequential(
-            block(4, 64, bn=False),
-            block(64, 128),
-            block(128, 256),
-            block(256, 512),
-            nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=1),
-            nn.Sigmoid()
+        self.decoder = nn.Sequential(
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, output_nc, kernel_size=3, padding=1),
+            nn.Tanh()  # Output normalized to [-1, 1]
         )
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x, segmap):
+        x = self.encoder(x)
+        x = self.spade1(x, segmap)
+        x = self.spade2(x, segmap)
+        x = self.decoder(x)
+        return x
