@@ -34,7 +34,6 @@ for epoch in range(EPOCHS):
         # Print filenames
         sar_filename = dataset.sar_images[idx]
         optical_filename = dataset.optical_images[idx]
-        print(f"SAR Image: {sar_filename}, Optical Image: {optical_filename}")
 
         # Forward pass
         output = model(sar, sar)  # SAR image used as segmentation map
