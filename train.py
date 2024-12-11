@@ -20,7 +20,7 @@ generator = SPADEGenerator().to(DEVICE)
 discriminator = Discriminator().to(DEVICE)
 
 # Loss Functions
-adversarial_loss = nn.BCELoss()
+adversarial_loss = nn.BCEWithLogitsLoss()
 pixelwise_loss = nn.L1Loss()
 
 # Optimizers
@@ -33,27 +33,8 @@ for epoch in range(EPOCHS):
         sar = sar.to(DEVICE)
         optical = optical.to(DEVICE)
 
-        # Adversarial ground truths
-        valid = torch.ones(sar.size(0), 1, 16, 16).to(DEVICE)
-        fake = torch.zeros(sar.size(0), 1, 16, 16).to(DEVICE)
-
-        # ---------------------
-        #  Train Generator
-        # ---------------------
-        optimizer_G.zero_grad()
-
         # Generate images
         gen_optical = generator(sar, sar)
-
-        # Loss measures generator's ability to fool the discriminator
-        combined_input = torch.cat((sar, gen_optical), 1)
-        pred_fake = discriminator(combined_input)
-        loss_GAN = adversarial_loss(pred_fake, valid)
-        loss_pixel = pixelwise_loss(gen_optical, optical)
-        loss_G = loss_GAN + 100 * loss_pixel
-
-        loss_G.backward()
-        optimizer_G.step()
 
         # ---------------------
         #  Train Discriminator
@@ -63,18 +44,35 @@ for epoch in range(EPOCHS):
         # Real images
         real_input = torch.cat((sar, optical), 1)
         pred_real = discriminator(real_input)
-        loss_real = adversarial_loss(pred_real, valid)
+        output_size = pred_real.size()[2:]
+        valid = torch.ones(sar.size(0), 1, *output_size).to(DEVICE)
 
         # Fake images
         fake_input = torch.cat((sar, gen_optical.detach()), 1)
         pred_fake = discriminator(fake_input)
-        loss_fake = adversarial_loss(pred_fake, fake)
+        fake = torch.zeros(sar.size(0), 1, *output_size).to(DEVICE)
 
         # Total loss
+        loss_real = adversarial_loss(pred_real, valid)
+        loss_fake = adversarial_loss(pred_fake, fake)
         loss_D = (loss_real + loss_fake) * 0.5
 
         loss_D.backward()
         optimizer_D.step()
+
+        # ---------------------
+        #  Train Generator
+        # ---------------------
+        optimizer_G.zero_grad()
+
+        # Loss measures generator's ability to fool the discriminator
+        pred_fake = discriminator(fake_input)
+        loss_GAN = adversarial_loss(pred_fake, valid)
+        loss_pixel = pixelwise_loss(gen_optical, optical)
+        loss_G = loss_GAN + 100 * loss_pixel
+
+        loss_G.backward()
+        optimizer_G.step()
 
     print(f"Epoch [{epoch+1}/{EPOCHS}] Loss D: {loss_D.item():.4f}, Loss G: {loss_G.item():.4f}")
 
