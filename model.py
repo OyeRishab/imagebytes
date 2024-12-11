@@ -1,6 +1,5 @@
 import torch.nn as nn
 
-# Define SPADE Block
 class SPADE(nn.Module):
     def __init__(self, norm_nc, label_nc):
         super(SPADE, self).__init__()
@@ -17,7 +16,6 @@ class SPADE(nn.Module):
         beta = self.mlp_beta(actv)
         return normalized * (1 + gamma) + beta
 
-# Define SPADE Generator
 class SPADEGenerator(nn.Module):
     def __init__(self, input_nc=1, output_nc=3, segmap_nc=1):
         super(SPADEGenerator, self).__init__()
@@ -43,3 +41,22 @@ class SPADEGenerator(nn.Module):
         x = self.spade2(x, segmap)
         x = self.decoder(x)
         return x
+
+class Discriminator(nn.Module):
+    def __init__(self, input_nc=4):
+        super(Discriminator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(input_nc, 64, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(256, 1, kernel_size=4, padding=1),
+            nn.Sigmoid()
+        )
+        
+    def forward(self, x):
+        return self.model(x)
