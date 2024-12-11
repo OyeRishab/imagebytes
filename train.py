@@ -3,12 +3,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from utils import SAROpticalDataset
-from model import SPADEGenerator, Discriminator
+from model import SPADEGenerator, Discriminator, UNet
 
 # Parameters
 BATCH_SIZE = 16
 EPOCHS = 100
 LR = 1e-4
+GR = 2e-1
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Load Data
@@ -18,14 +19,16 @@ dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 # Initialize Models
 generator = SPADEGenerator().to(DEVICE)
 discriminator = Discriminator().to(DEVICE)
+unet = UNet(in_channels=1, out_channels=3).to(DEVICE)
 
 # Loss Functions
 adversarial_loss = nn.BCEWithLogitsLoss()
 pixelwise_loss = nn.L1Loss()
 
 # Optimizers
-optimizer_G = optim.Adam(generator.parameters(), lr=LR)
+optimizer_G = optim.Adam(generator.parameters(), lr=GR)
 optimizer_D = optim.Adam(discriminator.parameters(), lr=LR)
+optimizer_U = optim.Adam(unet.parameters(), lr=LR)
 
 # Training Loop
 for epoch in range(EPOCHS):
@@ -39,6 +42,7 @@ for epoch in range(EPOCHS):
         # ---------------------
         #  Train Discriminator
         # ---------------------
+        features = unet(sar)
         optimizer_D.zero_grad()
 
         # Real images

@@ -29,7 +29,7 @@ def create_image_dataset(large_image_path, output_dir):
             crop = large_image.crop((left, upper, right, lower))
             
             # Save the cropped image
-            crop.save(os.path.join(output_dir, f'SAR3_{i}_{j}.png'))
+            crop.save(os.path.join(output_dir, f'SAR6_{i}_{j}.png'))
 
 # Example usage
-create_image_dataset('SAR3.jpg', 'SAR3/')
+create_image_dataset('SAR6.jpg', 'images/sar_train/')
